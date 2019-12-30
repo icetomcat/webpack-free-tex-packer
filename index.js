@@ -3,6 +3,7 @@ const pathModule = require('path');
 const chokidar = require('chokidar');
 const texturePacker = require('free-tex-packer-core');
 const appInfo = require('./package.json');
+const glob = require("glob")
 
 const SUPPORTED_EXT = ['png', 'jpg', 'jpeg'];
 
@@ -153,6 +154,15 @@ class WebpackFreeTexPacker {
                     this.addDependencie(compilation.fileDependencies, srcPath);
                 }
             }
+        } else {
+            for(let srcPath of this.src) {
+                let path = fixPath(srcPath);
+                const list = glob.sync(path);
+                for(let file of list) {
+                    let ext = getExtFromPath(file);
+                    if(SUPPORTED_EXT.indexOf(ext) >= 0) files[getNameFromPath(file)] = file;
+                }
+            }
         }
 
         if(this.watchStarted && !this.changed) {
@@ -164,6 +174,11 @@ class WebpackFreeTexPacker {
         let names = Object.keys(files);
         for(let name of names) {
             images.push({path: name, contents: fs.readFileSync(files[name])});
+        }
+
+        if (!images.length) {
+            callback();
+            return;
         }
 
         texturePacker(images, this.options, (files) => {
